@@ -10,29 +10,15 @@ import { VirtualCCTVLab } from './components/VirtualCCTVLab';
 import { Navigation } from './components/Navigation';
 import { AppProvider } from './context/AppContext';
 
-const AppContent = () => {
+const AppContent = ({ onLogout }: { onLogout: () => void }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const users = localStorage.getItem('users');
-    if (!users) {
-      const demoUsers = [
-        {
-          id: '1',
-          username: 'admin',
-          email: 'admin@cybersentinel.com',
-          password: 'admin123',
-          role: 'admin',
-          createdAt: new Date().toISOString(),
-        }
-      ];
-      localStorage.setItem('users', JSON.stringify(demoUsers));
-    }
-  }, []);
+  // Removed localStorage initialization - now using backend API
 
   const handleLogout = () => {
     localStorage.removeItem('currentUser');
+    onLogout(); // Update parent authentication state
     navigate('/auth', { replace: true });
   };
 
@@ -75,6 +61,10 @@ export default function App() {
     return success;
   };
 
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+  };
+
 
   if (isAuthenticated === null) {
     return (
@@ -102,7 +92,7 @@ export default function App() {
             path="/*" 
             element={
               isAuthenticated ? (
-                <AppContent />
+                <AppContent onLogout={handleLogout} />
               ) : (
                 <Navigate to="/auth" replace />
               )

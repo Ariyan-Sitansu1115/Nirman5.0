@@ -1,11 +1,15 @@
 import { useState, useEffect } from 'react';
-import { Shield, AlertTriangle, Camera, Lock, Activity, TrendingUp, TrendingDown } from 'lucide-react';
+import { Shield, AlertTriangle, Camera, Lock, Activity, TrendingUp, TrendingDown, Zap, Search, Bell, X, CheckCircle } from 'lucide-react';
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { StreamViewer } from './StreamViewer';
 import { useAppContext } from '../context/AppContext';
+import { useNavigate } from 'react-router-dom';
 
 export function Dashboard() {
-  const { cameras, threats, stats } = useAppContext();
+  const { cameras, threats, stats, updateCamera } = useAppContext();
+  const navigate = useNavigate();
+  const [notifications, setNotifications] = useState<Array<{ id: string; message: string; type: 'info' | 'warning' | 'success'; timestamp: Date }>>([]);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   const [realtimeData, setRealtimeData] = useState<Array<{ time: string; threats: number; scans: number }>>([
     { time: '00:00', threats: 2, scans: 15 },
@@ -50,9 +54,111 @@ export function Dashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#1A120B] to-[#3C2A21] px-6 py-8">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-4xl mb-2 text-[#E5E5CB]">Security Operations Center</h1>
-          <p className="text-[#D5CEA3]">Real-time CCTV network monitoring and threat analysis</p>
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-4xl mb-2 text-[#E5E5CB]">Security Operations Center</h1>
+            <p className="text-[#D5CEA3]">Real-time CCTV network monitoring and threat analysis</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowNotifications(!showNotifications)}
+              className="relative p-3 bg-[#3C2A21]/40 border border-[#D5CEA3]/20 rounded-lg hover:border-[#D5CEA3] transition-colors"
+            >
+              <Bell className="w-5 h-5 text-[#D5CEA3]" />
+              {notifications.length > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-xs flex items-center justify-center text-white">
+                  {notifications.length}
+                </span>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Notifications Panel */}
+        {showNotifications && (
+          <div className="mb-6 bg-[#3C2A21]/40 backdrop-blur-sm border border-[#D5CEA3]/20 rounded-lg p-4 max-h-64 overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg text-[#E5E5CB] flex items-center gap-2">
+                <Bell className="w-5 h-5" />
+                <span>Notifications ({notifications.length})</span>
+              </h3>
+              <button
+                onClick={() => setShowNotifications(false)}
+                className="p-1 hover:bg-[#1A120B] rounded"
+              >
+                <X className="w-4 h-4 text-[#E5E5CB]" />
+              </button>
+            </div>
+            {notifications.length === 0 ? (
+              <p className="text-sm text-[#E5E5CB]/60 text-center py-4">No new notifications</p>
+            ) : (
+              <div className="space-y-2">
+                {notifications.map((notif) => (
+                  <div
+                    key={notif.id}
+                    className={`p-3 rounded-lg border ${
+                      notif.type === 'warning' ? 'bg-red-500/10 border-red-500/30' :
+                      notif.type === 'success' ? 'bg-green-500/10 border-green-500/30' :
+                      'bg-blue-500/10 border-blue-500/30'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-sm text-[#E5E5CB] flex-1">{notif.message}</p>
+                      <button
+                        onClick={() => removeNotification(notif.id)}
+                        className="p-1 hover:bg-[#1A120B]/40 rounded"
+                      >
+                        <X className="w-3 h-3 text-[#E5E5CB]/60" />
+                      </button>
+                    </div>
+                    <p className="text-xs text-[#E5E5CB]/50 mt-1">
+                      {notif.timestamp.toLocaleTimeString()}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Quick Actions */}
+        <div className="mb-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <button
+            onClick={() => navigate('/scanner')}
+            className="flex items-center gap-3 p-4 bg-[#3C2A21]/40 backdrop-blur-sm border border-[#D5CEA3]/20 rounded-lg hover:border-[#D5CEA3] transition-colors group"
+          >
+            <div className="p-3 bg-[#D5CEA3]/10 rounded-lg group-hover:bg-[#D5CEA3]/20 transition-colors">
+              <Search className="w-6 h-6 text-[#D5CEA3]" />
+            </div>
+            <div className="text-left">
+              <div className="text-[#E5E5CB] font-medium">Quick Scan</div>
+              <div className="text-sm text-[#E5E5CB]/60">Scan a camera for vulnerabilities</div>
+            </div>
+          </button>
+          <button
+            onClick={() => navigate('/hardening')}
+            className="flex items-center gap-3 p-4 bg-[#3C2A21]/40 backdrop-blur-sm border border-[#D5CEA3]/20 rounded-lg hover:border-[#D5CEA3] transition-colors group"
+          >
+            <div className="p-3 bg-[#D5CEA3]/10 rounded-lg group-hover:bg-[#D5CEA3]/20 transition-colors">
+              <Zap className="w-6 h-6 text-[#D5CEA3]" />
+            </div>
+            <div className="text-left">
+              <div className="text-[#E5E5CB] font-medium">Auto-Harden</div>
+              <div className="text-sm text-[#E5E5CB]/60">Secure all vulnerable cameras</div>
+            </div>
+          </button>
+          <button
+            onClick={() => navigate('/threats')}
+            className="flex items-center gap-3 p-4 bg-[#3C2A21]/40 backdrop-blur-sm border border-[#D5CEA3]/20 rounded-lg hover:border-[#D5CEA3] transition-colors group"
+          >
+            <div className="p-3 bg-[#D5CEA3]/10 rounded-lg group-hover:bg-[#D5CEA3]/20 transition-colors">
+              <AlertTriangle className="w-6 h-6 text-[#D5CEA3]" />
+            </div>
+            <div className="text-left">
+              <div className="text-[#E5E5CB] font-medium">View Threats</div>
+              <div className="text-sm text-[#E5E5CB]/60">{stats.activeThreats} active threats</div>
+            </div>
+          </button>
         </div>
 
         {/* Stats Grid */}
@@ -185,10 +291,12 @@ export function Dashboard() {
                     return `${Math.floor(seconds / 3600)} hours ago`;
                   };
 
+                  const camera = cameras.find(c => c.id === alert.camera);
+                  
                   return (
                     <div 
                       key={alert.id}
-                      className={`p-4 rounded-lg border cursor-pointer transition-all hover:scale-[1.02] ${
+                      className={`p-4 rounded-lg border transition-all ${
                         alert.severity === 'critical' 
                           ? 'bg-red-500/10 border-red-500/30 hover:border-red-500/50' 
                           : alert.severity === 'high'
@@ -207,7 +315,16 @@ export function Dashboard() {
                         <div className="flex-1">
                           <div className="text-xs text-[#D5CEA3] mb-1">{alert.camera}</div>
                           <div className="text-sm text-[#E5E5CB] mb-1">{alert.description}</div>
-                          <div className="text-xs text-[#E5E5CB]/50">{getTimeAgo(alert.timestamp)}</div>
+                          <div className="text-xs text-[#E5E5CB]/50 mb-2">{getTimeAgo(alert.timestamp)}</div>
+                          {camera && camera.status === 'vulnerable' && (
+                            <button
+                              onClick={() => handleQuickHarden(camera.id)}
+                              className="flex items-center gap-1 px-2 py-1 bg-[#D5CEA3]/20 text-[#D5CEA3] rounded text-xs hover:bg-[#D5CEA3]/30 transition-colors"
+                            >
+                              <Zap className="w-3 h-3" />
+                              <span>Quick Harden</span>
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Shield, Lock, User, Mail, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react';
 import { AnimatedBackground } from './AnimatedBackground';
+import { apiService } from '../services/api';
 
 interface AuthPageProps {
   onLogin: (success: boolean) => void;
@@ -10,7 +11,7 @@ export function AuthPage({ onLogin }: AuthPageProps) {
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
-    username: '',
+    name: '',
     email: '',
     password: '',
     adminCode: '',
@@ -27,69 +28,57 @@ export function AuthPage({ onLogin }: AuthPageProps) {
 
     try {
       if (isLogin) {
-        // Login logic
-        const users = JSON.parse(localStorage.getItem('users') || '[]');
-        const user = users.find((u: any) => 
-          u.username === formData.username && u.password === formData.password
-        );
-
-        if (user) {
-          localStorage.setItem('currentUser', JSON.stringify(user));
-          setSuccess('Login successful! Redirecting...');
-          // Call onLogin with true to update the authentication state
-          onLogin(true);
-        } else {
-          setError('Invalid username or password');
+        // Login using backend API
+        if (!formData.email || !formData.password) {
+          setError('Email and password are required');
+          setIsLoading(false);
+          return;
         }
+
+        const response = await apiService.login({
+          email: formData.email,
+          password: formData.password,
+        });
+
+        // Store user info in localStorage for frontend state management
+        localStorage.setItem('currentUser', JSON.stringify(response.user));
+        setSuccess('Login successful! Redirecting...');
+        onLogin(true);
       } else {
-        // Signup logic
-        if (!formData.username || !formData.email || !formData.password || !formData.adminCode) {
-          setError('All fields are required');
+        // Signup using backend API
+        if (!formData.name || !formData.email || !formData.password) {
+          setError('Name, email, and password are required');
+          setIsLoading(false);
           return;
         }
 
         if (formData.password.length < 6) {
           setError('Password must be at least 6 characters');
+          setIsLoading(false);
           return;
         }
 
-        // Check admin code
+        // Check admin code (frontend validation only)
         if (formData.adminCode !== 'ADMIN2024') {
           setError('Invalid admin code. Only administrators can register.');
+          setIsLoading(false);
           return;
         }
 
-        // Check if user already exists
-        const users = JSON.parse(localStorage.getItem('users') || '[]');
-        if (users.find((u: any) => u.username === formData.username)) {
-          setError('Username already exists');
-          return;
-        }
-
-        if (users.find((u: any) => u.email === formData.email)) {
-          setError('Email already exists');
-          return;
-        }
-
-        // Create new user
-        const newUser = {
-          id: Date.now().toString(),
-          username: formData.username,
+        const response = await apiService.signup({
+          name: formData.name,
           email: formData.email,
           password: formData.password,
-          role: 'admin',
-          createdAt: new Date().toISOString(),
-        };
+        });
 
-        users.push(newUser);
-        localStorage.setItem('users', JSON.stringify(users));
-        localStorage.setItem('currentUser', JSON.stringify(newUser));
+        // Store user info in localStorage for frontend state management
+        localStorage.setItem('currentUser', JSON.stringify(response.user));
         setSuccess('Account created successfully! Redirecting...');
-        // Call onLogin with true to update the authentication state
         onLogin(true);
       }
     } catch (err) {
-      setError('An error occurred. Please try again.');
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred. Please try again.';
+      setError(errorMessage);
       console.error('Authentication error:', err);
     } finally {
       setIsLoading(false);
@@ -97,7 +86,7 @@ export function AuthPage({ onLogin }: AuthPageProps) {
   };
 
   const handleDemoLogin = () => {
-    setFormData({ ...formData, username: 'admin', password: 'admin123' });
+    setFormData({ ...formData, email: 'admin@cybersentinel.com', password: 'admin123' });
     setError('');
     setSuccess('Demo credentials loaded! Click Login to continue.');
   };
@@ -148,7 +137,7 @@ export function AuthPage({ onLogin }: AuthPageProps) {
                   setIsLogin(false);
                   setError('');
                   setSuccess('');
-                  setFormData({ username: '', email: '', password: '', adminCode: '' });
+                  setFormData({ name: '', email: '', password: '', adminCode: '' });
                 }}
                 className={`flex-1 py-2.5 rounded-lg transition-all duration-300 ${
                   !isLogin 
@@ -177,34 +166,34 @@ export function AuthPage({ onLogin }: AuthPageProps) {
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Username */}
+              {/* Email (Login) */}
               <div>
-                <label className="block text-sm text-[#D5CEA3] mb-2">Username</label>
+                <label className="block text-sm text-[#D5CEA3] mb-2">Email</label>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#D5CEA3]/50" />
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#D5CEA3]/50" />
                   <input
-                    type="text"
-                    value={formData.username}
-                    onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     className="w-full bg-[#1A120B]/50 border border-[#D5CEA3]/30 rounded-lg pl-11 pr-4 py-3 text-[#E5E5CB] placeholder-[#E5E5CB]/30 focus:outline-none focus:border-[#D5CEA3] transition-colors"
-                    placeholder="Enter your username"
+                    placeholder="admin@cybersentinel.com"
                     required
                   />
                 </div>
               </div>
 
-              {/* Email (Signup only) */}
+              {/* Name (Signup only) */}
               {!isLogin && (
                 <div>
-                  <label className="block text-sm text-[#D5CEA3] mb-2">Email</label>
+                  <label className="block text-sm text-[#D5CEA3] mb-2">Name</label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#D5CEA3]/50" />
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#D5CEA3]/50" />
                     <input
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      type="text"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       className="w-full bg-[#1A120B]/50 border border-[#D5CEA3]/30 rounded-lg pl-11 pr-4 py-3 text-[#E5E5CB] placeholder-[#E5E5CB]/30 focus:outline-none focus:border-[#D5CEA3] transition-colors"
-                      placeholder="admin@cybersentinel.com"
+                      placeholder="Enter your name"
                       required
                     />
                   </div>
@@ -288,7 +277,7 @@ export function AuthPage({ onLogin }: AuthPageProps) {
                   Load Demo Credentials
                 </button>
                 <div className="mt-3 text-xs text-[#E5E5CB]/50 bg-[#1A120B]/30 p-3 rounded-lg space-y-1">
-                  <div>Username: <span className="text-[#D5CEA3]">admin</span></div>
+                  <div>Email: <span className="text-[#D5CEA3]">admin@cybersentinel.com</span></div>
                   <div>Password: <span className="text-[#D5CEA3]">admin123</span></div>
                 </div>
               </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Shield, Lock, Key, Wifi, Server, Check, AlertTriangle, Play, Download } from 'lucide-react';
+import { Shield, Lock, Key, Wifi, Server, Check, AlertTriangle, Play, Download, CheckSquare, Square, Clock, Zap } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { Camera } from '../context/AppContext';
 
@@ -34,6 +34,9 @@ export function HardeningPlatform() {
   const { cameras, updateCamera, showNotification } = useAppContext();
   const [selectedCamera, setSelectedCamera] = useState<string | null>(null);
   const [isHardening, setIsHardening] = useState(false);
+  const [selectedCameras, setSelectedCameras] = useState<Set<string>>(new Set());
+  const [hardeningProgress, setHardeningProgress] = useState<{ [key: string]: number }>({});
+  const [currentStep, setCurrentStep] = useState<string>('');
 
   const handleAutoHarden = async (cameraId: string) => {
     try {
@@ -90,29 +93,62 @@ export function HardeningPlatform() {
   };
 
   const handleHardenAll = async () => {
-    const confirmed = confirm('Are you sure you want to harden all cameras? This will take a few moments.');
+    const camerasToHarden = selectedCameras.size > 0 
+      ? cameras.filter(c => selectedCameras.has(c.id))
+      : cameras;
+    
+    if (camerasToHarden.length === 0) {
+      showNotification('Please select at least one camera to harden', 'warning');
+      return;
+    }
+
+    const confirmed = confirm(`Are you sure you want to harden ${camerasToHarden.length} camera(s)? This will take a few moments.`);
     if (!confirmed) return;
 
     setIsHardening(true);
     
     try {
       // Process cameras sequentially with a delay between each
-      for (let i = 0; i < cameras.length; i++) {
-        const camera = cameras[i];
+      for (let i = 0; i < camerasToHarden.length; i++) {
+        const camera = camerasToHarden[i];
         setSelectedCamera(camera.id);
         await handleAutoHarden(camera.id);
         
         // Add a small delay between cameras (except after the last one)
-        if (i < cameras.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 2000));
+        if (i < camerasToHarden.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
         }
       }
+      
+      showNotification(`Successfully hardened ${camerasToHarden.length} camera(s)!`, 'success');
+      setSelectedCameras(new Set());
     } catch (error) {
       console.error('Error during bulk hardening:', error);
+      showNotification('Error during bulk hardening process', 'error');
     } finally {
       setIsHardening(false);
       setSelectedCamera(null);
     }
+  };
+
+  const toggleCameraSelection = (cameraId: string) => {
+    setSelectedCameras(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(cameraId)) {
+        newSet.delete(cameraId);
+      } else {
+        newSet.add(cameraId);
+      }
+      return newSet;
+    });
+  };
+
+  const selectAllCameras = () => {
+    setSelectedCameras(new Set(cameras.map(c => c.id)));
+  };
+
+  const deselectAllCameras = () => {
+    setSelectedCameras(new Set());
   };
 
   const handleExportConfig = () => {
@@ -262,6 +298,57 @@ export function HardeningPlatform() {
           </div>
         </div>
 
+        {/* Batch Selection Controls */}
+        <div className="mb-6 flex items-center justify-between bg-[#3C2A21]/40 backdrop-blur-sm border border-[#D5CEA3]/20 rounded-lg p-4">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={selectAllCameras}
+              className="flex items-center gap-2 px-4 py-2 bg-[#1A120B] text-[#D5CEA3] border border-[#D5CEA3]/30 rounded-lg hover:border-[#D5CEA3] transition-colors text-sm"
+            >
+              <CheckSquare className="w-4 h-4" />
+              <span>Select All</span>
+            </button>
+            <button
+              onClick={deselectAllCameras}
+              className="flex items-center gap-2 px-4 py-2 bg-[#1A120B] text-[#D5CEA3] border border-[#D5CEA3]/30 rounded-lg hover:border-[#D5CEA3] transition-colors text-sm"
+            >
+              <Square className="w-4 h-4" />
+              <span>Deselect All</span>
+            </button>
+            <span className="text-sm text-[#E5E5CB]/60">
+              {selectedCameras.size} of {cameras.length} selected
+            </span>
+          </div>
+          <button
+            onClick={handleHardenAll}
+            disabled={isHardening || selectedCameras.size === 0}
+            className="flex items-center gap-2 px-6 py-2 bg-[#D5CEA3] text-[#1A120B] rounded-lg hover:bg-[#E5E5CB] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Zap className="w-4 h-4" />
+            <span>Harden Selected ({selectedCameras.size})</span>
+          </button>
+        </div>
+
+        {/* Current Hardening Progress */}
+        {isHardening && selectedCamera && currentStep && (
+          <div className="mb-6 bg-[#3C2A21]/40 backdrop-blur-sm border border-[#D5CEA3]/20 rounded-lg p-6">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-12 h-12 border-4 border-[#D5CEA3] border-t-transparent rounded-full animate-spin"></div>
+              <div className="flex-1">
+                <h3 className="text-lg text-[#E5E5CB] mb-1">Hardening in Progress</h3>
+                <p className="text-sm text-[#D5CEA3]">{currentStep}</p>
+                <div className="mt-3 w-full bg-[#1A120B] rounded-full h-2">
+                  <div 
+                    className="bg-[#D5CEA3] h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${hardeningProgress[selectedCamera] || 0}%` }}
+                  ></div>
+                </div>
+                <p className="text-xs text-[#D5CEA3] mt-1">{hardeningProgress[selectedCamera] || 0}% complete</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Camera List */}
           <div className="lg:col-span-2 space-y-4">
@@ -271,6 +358,9 @@ export function HardeningPlatform() {
                 camera={camera} 
                 onHarden={handleAutoHarden}
                 isHardening={isHardening && selectedCamera === camera.id}
+                isSelected={selectedCameras.has(camera.id)}
+                onToggleSelect={() => toggleCameraSelection(camera.id)}
+                progress={hardeningProgress[camera.id]}
               />
             ))}
           </div>
@@ -369,7 +459,7 @@ interface CameraCardProps {
   isHardening: boolean;
 }
 
-function CameraCard({ camera, onHarden, isHardening }: CameraCardProps) {
+function CameraCard({ camera, onHarden, isHardening, isSelected = false, onToggleSelect, progress }: CameraCardProps) {
   const statusColors = {
     vulnerable: 'border-red-500/50 bg-red-500/10',
     secure: 'border-green-500/50 bg-green-500/10',
@@ -377,14 +467,31 @@ function CameraCard({ camera, onHarden, isHardening }: CameraCardProps) {
 
   const completedChecks = Object.values(camera.securityChecks).filter(Boolean).length;
   const totalChecks = Object.keys(camera.securityChecks).length;
-  const progress = (completedChecks / totalChecks) * 100;
+  const securityProgress = (completedChecks / totalChecks) * 100;
+  const hardeningProgressValue = progress || 0;
 
   return (
-    <div className={`bg-[#3C2A21]/40 backdrop-blur-sm border-2 rounded-lg p-6 ${statusColors[camera.status]}`}>
+    <div className={`bg-[#3C2A21]/40 backdrop-blur-sm border-2 rounded-lg p-6 transition-all ${
+      isSelected ? 'border-[#D5CEA3] ring-2 ring-[#D5CEA3]/30' : statusColors[camera.status]
+    }`}>
       <div className="flex items-start justify-between mb-4">
-        <div>
-          <h3 className="text-xl text-[#E5E5CB] mb-1">{camera.name}</h3>
-          <div className="text-sm text-[#E5E5CB]/60">{camera.id} • {camera.ip}</div>
+        <div className="flex items-start gap-3 flex-1">
+          {onToggleSelect && (
+            <button
+              onClick={onToggleSelect}
+              className="mt-1 p-1 hover:bg-[#1A120B]/40 rounded transition-colors"
+            >
+              {isSelected ? (
+                <CheckSquare className="w-5 h-5 text-[#D5CEA3]" />
+              ) : (
+                <Square className="w-5 h-5 text-[#E5E5CB]/40" />
+              )}
+            </button>
+          )}
+          <div className="flex-1">
+            <h3 className="text-xl text-[#E5E5CB] mb-1">{camera.name}</h3>
+            <div className="text-sm text-[#E5E5CB]/60">{camera.id} • {camera.ip}</div>
+          </div>
         </div>
         <div className={`px-3 py-1 rounded-full text-xs uppercase ${
           camera.status === 'vulnerable' ? 'bg-red-500/20 text-red-400' :
@@ -397,16 +504,29 @@ function CameraCard({ camera, onHarden, isHardening }: CameraCardProps) {
       {/* Progress Bar */}
       <div className="mb-4">
         <div className="flex items-center justify-between text-sm mb-2">
-          <span className="text-[#E5E5CB]/70">Security Configuration</span>
-          <span className="text-[#D5CEA3]">{completedChecks}/{totalChecks}</span>
+          <span className="text-[#E5E5CB]/70">
+            {isHardening && hardeningProgressValue > 0 ? 'Hardening Progress' : 'Security Configuration'}
+          </span>
+          <span className="text-[#D5CEA3]">
+            {isHardening && hardeningProgressValue > 0 
+              ? `${hardeningProgressValue}%` 
+              : `${completedChecks}/${totalChecks}`}
+          </span>
         </div>
         <div className="h-2 bg-[#1A120B] rounded-full overflow-hidden">
-          <div 
-            className={`h-full transition-all duration-500 ${
-              progress === 100 ? 'bg-green-500' : progress > 50 ? 'bg-yellow-500' : 'bg-red-500'
-            }`}
-            style={{ width: `${progress}%` }}
-          ></div>
+          {isHardening && hardeningProgressValue > 0 ? (
+            <div 
+              className="h-full bg-[#D5CEA3] transition-all duration-300"
+              style={{ width: `${hardeningProgressValue}%` }}
+            ></div>
+          ) : (
+            <div 
+              className={`h-full transition-all duration-500 ${
+                securityProgress === 100 ? 'bg-green-500' : securityProgress > 50 ? 'bg-yellow-500' : 'bg-red-500'
+              }`}
+              style={{ width: `${securityProgress}%` }}
+            ></div>
+          )}
         </div>
       </div>
 

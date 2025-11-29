@@ -12,7 +12,7 @@ export function Hero({ onLogout }: HeroProps) {
   const handleGetStarted = () => {
     navigate('/dashboard');
   };
-  const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+  const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}') as { name?: string; username?: string };
 
   return (
     <div className="relative min-h-screen overflow-hidden">

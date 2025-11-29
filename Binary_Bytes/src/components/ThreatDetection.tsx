@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { AlertTriangle, Activity, Shield, Eye, Bell, Filter, Download } from 'lucide-react';
+import { AlertTriangle, Activity, Shield, Eye, Bell, Filter, Download, Search, X, Clock, MapPin, User, Info, Camera } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useAppContext } from '../context/AppContext';
 
@@ -14,6 +14,9 @@ export function ThreatDetection() {
     push: true,
     webhook: true,
   });
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedThreat, setSelectedThreat] = useState<string | null>(null);
+  const [selectedThreats, setSelectedThreats] = useState<Set<string>>(new Set());
 
   const threatData = [
     { time: '00:00', threats: 2 },
@@ -75,7 +78,12 @@ export function ThreatDetection() {
   const filteredThreats = threats.filter(threat => {
     const severityMatch = filter === 'all' || threat.severity === filter;
     const statusMatch = statusFilter === 'all' || threat.status === statusFilter;
-    return severityMatch && statusMatch;
+    const searchMatch = searchQuery === '' || 
+      threat.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      threat.source.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      threat.camera.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      threat.type.toLowerCase().includes(searchQuery.toLowerCase());
+    return severityMatch && statusMatch && searchMatch;
   });
 
   const getTimeAgo = (timestamp: string) => {
@@ -192,8 +200,30 @@ export function ThreatDetection() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Threat List */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Filters */}
-            <div className="bg-[#3C2A21]/40 backdrop-blur-sm border border-[#D5CEA3]/20 rounded-lg p-4">
+            {/* Search and Filters */}
+            <div className="bg-[#3C2A21]/40 backdrop-blur-sm border border-[#D5CEA3]/20 rounded-lg p-4 mb-4">
+              {/* Search Bar */}
+              <div className="mb-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#D5CEA3]/50" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search threats by description, source, camera, or type..."
+                    className="w-full bg-[#1A120B] border border-[#D5CEA3]/30 rounded-lg pl-10 pr-10 py-2 text-[#E5E5CB] placeholder-[#E5E5CB]/30 focus:outline-none focus:border-[#D5CEA3]"
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[#D5CEA3]/50 hover:text-[#D5CEA3]"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+              
               <div className="flex items-center gap-4 flex-wrap">
                 <div className="flex items-center gap-2">
                   <Filter className="w-5 h-5 text-[#D5CEA3]" />
@@ -260,6 +290,7 @@ export function ThreatDetection() {
                     threat={threat} 
                     getTimeAgo={getTimeAgo}
                     onAction={handleThreatAction}
+                    onViewDetails={() => setSelectedThreat(threat.id)}
                   />
                 ))
               )}
@@ -347,7 +378,143 @@ export function ThreatDetection() {
             </div>
           </div>
         </div>
+
+        {/* Threat Details Modal */}
+        {selectedThreat && (
+          <ThreatDetailsModal
+            threatId={selectedThreat}
+            threats={threats}
+            onClose={() => setSelectedThreat(null)}
+            getTimeAgo={getTimeAgo}
+            onAction={handleThreatAction}
+          />
+        )}
       </div>
+    </div>
+  );
+}
+
+function ThreatDetailsModal({
+  threatId,
+  threats,
+  onClose,
+  getTimeAgo,
+  onAction
+}: {
+  threatId: string;
+  threats: any[];
+  onClose: () => void;
+  getTimeAgo: (timestamp: string) => string;
+  onAction: (threatId: string, action: 'investigating' | 'resolved' | 'ignore') => void;
+}) {
+  const threat = threats.find(t => t.id === threatId);
+  
+  if (!threat) return null;
+
+  const severityColors = {
+    critical: 'text-red-400',
+    high: 'text-orange-400',
+    medium: 'text-yellow-400',
+    low: 'text-blue-400',
+  };
+
+  const typeLabels = {
+    unauthorized_access: 'Unauthorized Access',
+    brute_force: 'Brute Force Attack',
+    anomaly: 'Anomaly Detected',
+    intrusion: 'Intrusion Attempt',
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+      <div className="bg-[#3C2A21] border border-[#D5CEA3]/30 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-[#3C2A21] border-b border-[#D5CEA3]/20 p-6 flex items-center justify-between">
+          <h2 className="text-2xl text-[#E5E5CB]">Threat Details</h2>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-[#1A120B] rounded-lg transition-colors"
+          >
+            <X className="w-5 h-5 text-[#E5E5CB]" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-6">
+          {/* Threat ID and Status */}
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-3xl text-[#E5E5CB] mb-2">{threat.id}</div>
+              <div className="text-sm text-[#D5CEA3]">{getTimeAgo(threat.timestamp)}</div>
+            </div>
+            <div className="text-right">
+              <div className={`text-lg font-semibold mb-1 ${severityColors[threat.severity]}`}>
+                {threat.severity.toUpperCase()}
+              </div>
+              <div className={`text-xs px-3 py-1 rounded-full inline-block ${
+                threat.status === 'active' ? 'bg-red-500/20 text-red-400' :
+                threat.status === 'investigating' ? 'bg-yellow-500/20 text-yellow-400' :
+                'bg-green-500/20 text-green-400'
+              }`}>
+                {threat.status.toUpperCase()}
+              </div>
+            </div>
+          </div>
+
+          {/* Description */}
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Info className="w-5 h-5 text-[#D5CEA3]" />
+              <h3 className="text-lg text-[#E5E5CB]">Description</h3>
+            </div>
+            <p className="text-[#E5E5CB]/80 bg-[#1A120B]/40 p-4 rounded-lg border border-[#D5CEA3]/10">
+              {threat.description}
+            </p>
+          </div>
+
+          {/* Threat Information Grid */}
+          <div className="grid grid-cols-2 gap-4">
+            <DetailItem icon={<User className="w-5 h-5" />} label="Threat Type" value={typeLabels[threat.type]} />
+            <DetailItem icon={<MapPin className="w-5 h-5" />} label="Source IP" value={threat.source} />
+            <DetailItem icon={<Camera className="w-5 h-5" />} label="Camera ID" value={threat.camera} />
+            <DetailItem icon={<Clock className="w-5 h-5" />} label="Detected" value={new Date(threat.timestamp).toLocaleString()} />
+          </div>
+
+          {/* Actions */}
+          {threat.status !== 'resolved' && (
+            <div className="flex gap-3 pt-4 border-t border-[#D5CEA3]/20">
+              <button
+                onClick={() => {
+                  onAction(threat.id, 'investigating');
+                  onClose();
+                }}
+                className="flex-1 px-4 py-2 bg-[#D5CEA3] text-[#1A120B] rounded-lg hover:bg-[#E5E5CB] transition-colors"
+              >
+                Mark as Investigating
+              </button>
+              <button
+                onClick={() => {
+                  onAction(threat.id, 'resolved');
+                  onClose();
+                }}
+                className="flex-1 px-4 py-2 bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/30 transition-colors"
+              >
+                Resolve & Block
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DetailItem({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <div className="bg-[#1A120B]/40 p-4 rounded-lg border border-[#D5CEA3]/10">
+      <div className="flex items-center gap-2 mb-2 text-[#D5CEA3]">
+        {icon}
+        <span className="text-sm">{label}</span>
+      </div>
+      <div className="text-[#E5E5CB] font-medium">{value}</div>
     </div>
   );
 }
@@ -423,9 +590,10 @@ interface ThreatCardProps {
   };
   getTimeAgo: (timestamp: string) => string;
   onAction: (threatId: string, action: 'investigating' | 'resolved' | 'ignore') => void;
+  onViewDetails: () => void;
 }
 
-function ThreatCard({ threat, getTimeAgo, onAction }: ThreatCardProps) {
+function ThreatCard({ threat, getTimeAgo, onAction, onViewDetails }: ThreatCardProps) {
   const severityColors = {
     critical: 'border-red-500/50 bg-red-500/10',
     high: 'border-orange-500/50 bg-orange-500/10',
@@ -484,28 +652,37 @@ function ThreatCard({ threat, getTimeAgo, onAction }: ThreatCardProps) {
         </div>
       </div>
 
-      {threat.status !== 'resolved' && (
-        <div className="flex gap-2">
-          <button 
-            onClick={() => onAction(threat.id, 'investigating')}
-            className="flex-1 px-4 py-2 bg-[#D5CEA3] text-[#1A120B] rounded hover:bg-[#E5E5CB] transition-colors text-sm"
-          >
-            Investigate
-          </button>
-          <button 
-            onClick={() => onAction(threat.id, 'resolved')}
-            className="px-4 py-2 bg-red-500/20 text-red-400 border border-red-500/30 rounded hover:bg-red-500/30 transition-colors text-sm"
-          >
-            Block
-          </button>
-          <button 
-            onClick={() => onAction(threat.id, 'ignore')}
-            className="px-4 py-2 bg-[#1A120B]/40 text-[#E5E5CB] border border-[#D5CEA3]/20 rounded hover:border-[#D5CEA3]/40 transition-colors text-sm"
-          >
-            Ignore
-          </button>
-        </div>
-      )}
+      <div className="flex gap-2">
+        <button 
+          onClick={onViewDetails}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded hover:bg-blue-500/30 transition-colors text-sm"
+        >
+          <Info className="w-4 h-4" />
+          <span>View Details</span>
+        </button>
+        {threat.status !== 'resolved' && (
+          <>
+            <button 
+              onClick={() => onAction(threat.id, 'investigating')}
+              className="flex-1 px-4 py-2 bg-[#D5CEA3] text-[#1A120B] rounded hover:bg-[#E5E5CB] transition-colors text-sm"
+            >
+              Investigate
+            </button>
+            <button 
+              onClick={() => onAction(threat.id, 'resolved')}
+              className="px-4 py-2 bg-red-500/20 text-red-400 border border-red-500/30 rounded hover:bg-red-500/30 transition-colors text-sm"
+            >
+              Block
+            </button>
+            <button 
+              onClick={() => onAction(threat.id, 'ignore')}
+              className="px-4 py-2 bg-[#1A120B]/40 text-[#E5E5CB] border border-[#D5CEA3]/20 rounded hover:border-[#D5CEA3]/40 transition-colors text-sm"
+            >
+              Ignore
+            </button>
+          </>
+        )}
+      </div>
     </div>
   );
 }

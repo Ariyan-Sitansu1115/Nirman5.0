@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Play, AlertTriangle, CheckCircle, XCircle, Wifi, Lock, Shield, Server } from 'lucide-react';
+import { Search, Play, AlertTriangle, CheckCircle, XCircle, Wifi, Lock, Shield, Server, Download, RefreshCw, Filter, X } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 
 interface ScanResult {
@@ -24,6 +24,9 @@ export function SecurityScanner() {
   const [isScanning, setIsScanning] = useState(false);
   const [currentScan, setCurrentScan] = useState<ScanResult | null>(null);
   const [scanningStep, setScanningStep] = useState(0);
+  const [scanProgress, setScanProgress] = useState(0);
+  const [filterStatus, setFilterStatus] = useState<'all' | 'critical' | 'high' | 'medium' | 'low'>('all');
+  const [showFilters, setShowFilters] = useState(false);
 
   const handleScan = () => {
     if (!rtspUrl.trim()) {
@@ -33,14 +36,16 @@ export function SecurityScanner() {
 
     setIsScanning(true);
     setScanningStep(0);
+    setScanProgress(0);
     
-    // Simulate scanning process with steps
+    // Simulate scanning process with steps and progress
     const steps = [0, 1, 2, 3, 4];
     let currentStep = 0;
 
     const stepInterval = setInterval(() => {
       if (currentStep < steps.length) {
         setScanningStep(currentStep + 1);
+        setScanProgress(((currentStep + 1) / steps.length) * 100);
         currentStep++;
       } else {
         clearInterval(stepInterval);
@@ -108,9 +113,54 @@ export function SecurityScanner() {
       setCurrentScan(result);
       setIsScanning(false);
       setScanningStep(0);
+      setScanProgress(100);
       setRtspUrl('');
     }, 3500);
   };
+
+  const handleExportResults = () => {
+    if (!currentScan) return;
+    
+    const report = {
+      scanId: currentScan.id,
+      timestamp: new Date(currentScan.timestamp).toLocaleString(),
+      rtspUrl: currentScan.rtspUrl,
+      riskScore: currentScan.riskScore,
+      status: currentScan.status,
+      vulnerabilities: currentScan.vulnerabilities,
+      findings: currentScan.findings,
+      recommendations: [
+        currentScan.findings.weakPassword && "Implement strong password policy",
+        currentScan.findings.unencryptedStream && "Enable RTSPS (RTSP over TLS)",
+        currentScan.findings.defaultCredentials && "Change default credentials",
+        "Configure firewall to restrict port access",
+        "Enable two-factor authentication if available"
+      ].filter(Boolean)
+    };
+
+    const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `scan-report-${currentScan.id}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleRescan = (url: string) => {
+    setRtspUrl(url);
+    setCurrentScan(null);
+    // Auto-start scan after a brief delay
+    setTimeout(() => {
+      handleScan();
+    }, 100);
+  };
+
+  const filteredResults = filterStatus === 'all' 
+    ? scanResults 
+    : scanResults.filter(r => r.status === filterStatus);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#1A120B] to-[#3C2A21] px-6 py-8">
@@ -187,9 +237,17 @@ export function SecurityScanner() {
           <div className="bg-[#3C2A21]/40 backdrop-blur-sm border border-[#D5CEA3]/20 rounded-lg p-6 mb-8">
             <div className="flex items-center gap-4 mb-4">
               <div className="w-12 h-12 border-4 border-[#D5CEA3] border-t-transparent rounded-full animate-spin"></div>
-              <div>
+              <div className="flex-1">
                 <h3 className="text-xl text-[#E5E5CB]">Scanning in progress...</h3>
                 <p className="text-sm text-[#D5CEA3]">Analyzing security vulnerabilities</p>
+                {/* Progress Bar */}
+                <div className="mt-3 w-full bg-[#1A120B] rounded-full h-2">
+                  <div 
+                    className="bg-[#D5CEA3] h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${scanProgress}%` }}
+                  ></div>
+                </div>
+                <p className="text-xs text-[#D5CEA3] mt-1">{Math.round(scanProgress)}% complete</p>
               </div>
             </div>
             <div className="space-y-2">
@@ -206,19 +264,44 @@ export function SecurityScanner() {
         {currentScan && !isScanning && (
           <div className="bg-[#3C2A21]/40 backdrop-blur-sm border border-[#D5CEA3]/20 rounded-lg p-6 mb-8 animate-fadeIn">
             <div className="flex items-start justify-between mb-6">
-              <div>
-                <h3 className="text-2xl text-[#E5E5CB] mb-2">Scan Complete</h3>
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-2">
+                  <h3 className="text-2xl text-[#E5E5CB]">Scan Complete</h3>
+                  <span className="text-xs text-[#D5CEA3] bg-[#1A120B]/40 px-2 py-1 rounded">
+                    {new Date(currentScan.timestamp).toLocaleString()}
+                  </span>
+                </div>
                 <p className="text-sm text-[#D5CEA3]">{currentScan.rtspUrl}</p>
               </div>
-              <div className="text-right">
-                <div className="text-4xl text-[#E5E5CB] mb-1">{currentScan.riskScore}</div>
-                <div className={`text-sm px-3 py-1 rounded-full inline-block ${
-                  currentScan.status === 'critical' ? 'bg-red-500/20 text-red-400' :
-                  currentScan.status === 'high' ? 'bg-orange-500/20 text-orange-400' :
-                  currentScan.status === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
-                  'bg-green-500/20 text-green-400'
-                }`}>
-                  {currentScan.status.toUpperCase()} RISK
+              <div className="flex items-center gap-3">
+                <div className="text-right">
+                  <div className="text-4xl text-[#E5E5CB] mb-1">{currentScan.riskScore}</div>
+                  <div className={`text-sm px-3 py-1 rounded-full inline-block ${
+                    currentScan.status === 'critical' ? 'bg-red-500/20 text-red-400' :
+                    currentScan.status === 'high' ? 'bg-orange-500/20 text-orange-400' :
+                    currentScan.status === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
+                    'bg-green-500/20 text-green-400'
+                  }`}>
+                    {currentScan.status.toUpperCase()} RISK
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <button
+                    onClick={handleExportResults}
+                    className="flex items-center gap-2 px-4 py-2 bg-[#D5CEA3] text-[#1A120B] rounded-lg hover:bg-[#E5E5CB] transition-colors text-sm"
+                    title="Export Report"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>Export</span>
+                  </button>
+                  <button
+                    onClick={() => handleRescan(currentScan.rtspUrl)}
+                    className="flex items-center gap-2 px-4 py-2 bg-[#1A120B] text-[#D5CEA3] border border-[#D5CEA3]/30 rounded-lg hover:border-[#D5CEA3] transition-colors text-sm"
+                    title="Rescan"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    <span>Rescan</span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -291,32 +374,93 @@ export function SecurityScanner() {
         {/* Previous Scans */}
         {scanResults.length > 0 && (
           <div className="bg-[#3C2A21]/40 backdrop-blur-sm border border-[#D5CEA3]/20 rounded-lg p-6">
-            <h3 className="text-xl text-[#E5E5CB] mb-4">Previous Scans ({scanResults.length})</h3>
-            <div className="space-y-3">
-              {scanResults.map((result) => (
-                <div 
-                  key={result.id}
-                  className="flex items-center justify-between p-4 bg-[#1A120B]/40 rounded-lg border border-[#D5CEA3]/10 hover:border-[#D5CEA3]/30 transition-colors cursor-pointer"
-                  onClick={() => setCurrentScan(result)}
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl text-[#E5E5CB]">Previous Scans ({filteredResults.length})</h3>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowFilters(!showFilters)}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors text-sm ${
+                    showFilters 
+                      ? 'bg-[#D5CEA3] text-[#1A120B] border-[#D5CEA3]' 
+                      : 'bg-[#1A120B] text-[#D5CEA3] border-[#D5CEA3]/30 hover:border-[#D5CEA3]'
+                  }`}
                 >
-                  <div className="flex-1">
-                    <div className="text-[#E5E5CB] mb-1">{result.rtspUrl}</div>
-                    <div className="text-sm text-[#E5E5CB]/60">{result.vulnerabilities.length} vulnerabilities found</div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <div className="text-2xl text-[#E5E5CB]">{result.riskScore}</div>
-                      <div className="text-xs text-[#D5CEA3]">Risk Score</div>
-                    </div>
-                    <div className={`w-3 h-3 rounded-full ${
-                      result.status === 'critical' ? 'bg-red-500' :
-                      result.status === 'high' ? 'bg-orange-500' :
-                      result.status === 'medium' ? 'bg-yellow-500' :
-                      'bg-green-500'
-                    }`}></div>
-                  </div>
+                  <Filter className="w-4 h-4" />
+                  <span>Filter</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Filter Options */}
+            {showFilters && (
+              <div className="mb-4 p-4 bg-[#1A120B]/40 rounded-lg border border-[#D5CEA3]/20">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm text-[#D5CEA3]">Filter by risk:</span>
+                  {(['all', 'critical', 'high', 'medium', 'low'] as const).map((status) => (
+                    <button
+                      key={status}
+                      onClick={() => setFilterStatus(status)}
+                      className={`px-3 py-1 rounded text-sm transition-colors ${
+                        filterStatus === status
+                          ? 'bg-[#D5CEA3] text-[#1A120B]'
+                          : 'bg-[#1A120B] text-[#D5CEA3] border border-[#D5CEA3]/30 hover:border-[#D5CEA3]'
+                      }`}
+                    >
+                      {status.charAt(0).toUpperCase() + status.slice(1)}
+                    </button>
+                  ))}
                 </div>
-              ))}
+              </div>
+            )}
+
+            <div className="space-y-3">
+              {filteredResults.length === 0 ? (
+                <div className="text-center py-8 text-[#E5E5CB]/60">
+                  <p>No scans found with {filterStatus} risk level</p>
+                </div>
+              ) : (
+                filteredResults.map((result) => (
+                  <div 
+                    key={result.id}
+                    className="flex items-center justify-between p-4 bg-[#1A120B]/40 rounded-lg border border-[#D5CEA3]/10 hover:border-[#D5CEA3]/30 transition-colors cursor-pointer group"
+                    onClick={() => setCurrentScan(result)}
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="text-[#E5E5CB]">{result.rtspUrl}</div>
+                        {result.id === currentScan?.id && (
+                          <span className="text-xs text-[#D5CEA3] bg-[#D5CEA3]/20 px-2 py-0.5 rounded">Current</span>
+                        )}
+                      </div>
+                      <div className="text-sm text-[#E5E5CB]/60">
+                        {result.vulnerabilities.length} vulnerabilities • {new Date(result.timestamp).toLocaleString()}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRescan(result.rtspUrl);
+                        }}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:bg-[#1A120B] rounded"
+                        title="Rescan"
+                      >
+                        <RefreshCw className="w-4 h-4 text-[#D5CEA3]" />
+                      </button>
+                      <div className="text-right">
+                        <div className="text-2xl text-[#E5E5CB]">{result.riskScore}</div>
+                        <div className="text-xs text-[#D5CEA3]">Risk Score</div>
+                      </div>
+                      <div className={`w-3 h-3 rounded-full ${
+                        result.status === 'critical' ? 'bg-red-500' :
+                        result.status === 'high' ? 'bg-orange-500' :
+                        result.status === 'medium' ? 'bg-yellow-500' :
+                        'bg-green-500'
+                      }`}></div>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         )}
