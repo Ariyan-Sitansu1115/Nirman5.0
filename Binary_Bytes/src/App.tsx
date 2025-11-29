@@ -1,7 +1,14 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { AuthPage } from './components/AuthPage';
+import { Hero } from './components/Hero';
+import { Dashboard } from './components/Dashboard';
+import { SecurityScanner } from './components/SecurityScanner';
+import { ThreatDetection } from './components/ThreatDetection';
+import { HardeningPlatform } from './components/HardeningPlatform';
+import { VirtualCCTVLab } from './components/VirtualCCTVLab';
+import { Navigation } from './components/Navigation';
 import { AppProvider } from './context/AppContext';
-import AuthPage from './components/AuthPage';
 
 const AppContent = () => {
   const location = useLocation();
