@@ -25,238 +25,322 @@
 </head>
 <body class="theme-light">
 
-  <!-- Header -->
-  <nav class="navbar navbar-expand-lg border-bottom px-3 sticky-top bg-header">
-    <a class="navbar-brand fw-bold" href="#">Smart Air Quality Monitoring</a>
-    <div class="ms-auto d-flex align-items-center gap-3">
-      <span class="small text-muted" id="lastUpdate">Last update: —</span>
-      <button id="themeToggle" class="btn btn-sm btn-outline-secondary">Dark mode</button>
+  <!-- -------- LOGIN VIEW (first screen) -------- -->
+  <div id="loginView" class="login-wrapper">
+    <div class="login-card card card-panel">
+      <div class="card-body">
+        <h4 class="mb-3 text-center">Smart Air Quality Monitoring</h4>
+        <p class="text-muted small text-center mb-3">
+          Please sign in to view the live dashboard and health predictions.
+        </p>
+
+        <form id="loginForm" novalidate>
+          <div class="mb-3">
+            <label for="loginEmail" class="form-label">Email</label>
+            <input
+              type="email"
+              id="loginEmail"
+              class="form-control"
+              placeholder="you@example.com"
+              required
+            />
+          </div>
+          <div class="mb-3">
+            <label for="loginPassword" class="form-label">Password</label>
+            <input
+              type="password"
+              id="loginPassword"
+              class="form-control"
+              placeholder="Your password"
+              required
+            />
+          </div>
+          <div id="loginError" class="text-danger small mb-2"></div>
+          <button type="submit" class="btn btn-primary w-100">
+            Sign in
+          </button>
+        </form>
+
+        <p class="small text-muted mt-3 mb-0 text-center">
+          Use any Firebase Auth email/password user configured for this project.
+        </p>
+      </div>
     </div>
-  </nav>
+  </div>
 
-  <div class="container-fluid">
-    <div class="row flex-nowrap">
-      <!-- Sidebar -->
-      <aside class="col-12 col-md-3 col-lg-2 sidebar border-end p-3">
-        <h6 class="text-uppercase text-muted mb-3">Sensors</h6>
-        <ul class="nav nav-pills flex-column gap-2" id="sensorNav">
-          <li class="nav-item">
-            <a class="nav-link active" data-target="aqiSection" href="#">AQI</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" data-target="tempSection" href="#">Temperature</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" data-target="humiditySection" href="#">Humidity</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" data-target="co2Section" href="#">CO₂</a>
-          </li>
-          <!-- NEW: CO sidebar item -->
-          <li class="nav-item">
-            <a class="nav-link" data-target="coSection" href="#">CO</a>
-          </li>
+  <!-- -------- APP SHELL (dashboard) – hidden until login -------- -->
+  <div id="appShell" class="d-none">
 
-          <li class="nav-item">
-            <a class="nav-link" data-target="no2Section" href="#">NO₂</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" data-target="pmSection" href="#">PM2.5</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" data-target="aqiSubSection" href="#">AQI Sub-Indices</a>
-          </li>
-        </ul>
-      </aside>
+    <!-- Header -->
+    <nav class="navbar navbar-expand-lg border-bottom px-3 sticky-top bg-header">
+      <a class="navbar-brand fw-bold" href="#">Smart Air Quality Monitoring</a>
+      <div class="ms-auto d-flex align-items-center gap-3">
+        <span class="small text-muted" id="lastUpdate">Last update: —</span>
+        <span class="small text-muted d-none d-md-inline" id="userEmail"></span>
+        <button id="themeToggle" class="btn btn-sm btn-outline-secondary">Dark mode</button>
+        <button id="logoutBtn" class="btn btn-sm btn-outline-danger">Logout</button>
+      </div>
+    </nav>
 
-      <!-- Main content -->
-      <main class="col-12 col-md-9 col-lg-10 p-3">
+    <div class="container-fluid">
+      <div class="row flex-nowrap">
+        <!-- Sidebar -->
+        <aside class="col-12 col-md-3 col-lg-2 sidebar border-end p-3">
+          <h6 class="text-uppercase text-muted mb-3">Sections</h6>
+          <ul class="nav nav-pills flex-column gap-2" id="sensorNav">
+            <li class="nav-item">
+              <a class="nav-link active" data-target="aqiSection" href="#">AQI</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" data-target="tempSection" href="#">Temperature</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" data-target="humiditySection" href="#">Humidity</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" data-target="co2Section" href="#">CO₂</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" data-target="coSection" href="#">CO</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" data-target="no2Section" href="#">NO₂</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" data-target="pmSection" href="#">PM2.5</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" data-target="aqiSubSection" href="#">AQI Sub-Indices</a>
+            </li>
+            <!-- NEW: Health Predictions page -->
+            <li class="nav-item">
+              <a class="nav-link" data-target="predictionSection" href="#">Health Predictions</a>
+            </li>
+          </ul>
+        </aside>
 
-        <!-- AQI section -->
-        <section id="aqiSection" class="section">
-          <div class="row g-3">
-            <div class="col-12 col-lg-4">
-              <div class="card card-panel">
-                <div class="card-body text-center">
-                  <h5 class="card-title">AQI Gauge</h5>
-                  <canvas id="aqiGauge"></canvas>
-                  <div class="mt-3">
-                    <span class="badge" id="aqiBadge">—</span>
-                  </div>
-                  <div class="mt-2">
-                    <span id="dominantPollutant" class="small text-muted">
-                      Dominant pollutant: —
-                    </span>
+        <!-- Main content -->
+        <main class="col-12 col-md-9 col-lg-10 p-3">
+
+          <!-- AQI section + PIE CHART -->
+          <section id="aqiSection" class="section">
+            <div class="row g-3">
+              <div class="col-12 col-lg-4">
+                <div class="card card-panel">
+                  <div class="card-body text-center">
+                    <h5 class="card-title">AQI Gauge</h5>
+                    <canvas id="aqiGauge"></canvas>
+                    <div class="mt-3">
+                      <span class="badge" id="aqiBadge">—</span>
+                    </div>
+                    <div class="mt-2">
+                      <span id="dominantPollutant" class="small text-muted">
+                        Dominant pollutant: —
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-            <div class="col-12 col-lg-8">
-              <div class="card card-panel">
-                <div class="card-body">
-                  <h5 class="card-title">AQI (last 24 points)</h5>
-                  <canvas id="aqiChart"></canvas>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <!-- Temperature -->
-        <section id="tempSection" class="section d-none">
-          <div class="card card-panel">
-            <div class="card-body">
-              <div class="d-flex justify-content-between align-items-center mb-2">
-                <h5 class="card-title mb-0">Temperature (°C)</h5>
-                <span class="current-value-label" id="tempCurrent">—</span>
-              </div>
-              <canvas id="tempChart"></canvas>
-            </div>
-          </div>
-        </section>
-
-        <!-- Humidity -->
-        <section id="humiditySection" class="section d-none">
-          <div class="card card-panel">
-            <div class="card-body">
-              <div class="d-flex justify-content-between align-items-center mb-2">
-                <h5 class="card-title mb-0">Humidity (%)</h5>
-                <span class="current-value-label" id="humidityCurrent">—</span>
-              </div>
-              <canvas id="humidityChart"></canvas>
-            </div>
-          </div>
-        </section>
-
-        <!-- CO2 -->
-        <section id="co2Section" class="section d-none">
-          <div class="row g-3">
-            <div class="col-12 col-lg-4">
-              <div class="card card-panel">
-                <div class="card-body text-center">
-                  <h5 class="card-title">CO₂ Gauge (ppm)</h5>
-                  <canvas id="co2Gauge"></canvas>
-                  <div class="mt-3">
-                    <span class="badge" id="co2Badge">—</span>
+              <div class="col-12 col-lg-8">
+                <div class="card card-panel">
+                  <div class="card-body">
+                    <h5 class="card-title">AQI (time series)</h5>
+                    <canvas id="aqiChart"></canvas>
                   </div>
                 </div>
               </div>
             </div>
-            <div class="col-12 col-lg-8">
-              <div class="card card-panel">
-                <div class="card-body">
-                  <h5 class="card-title">CO₂ (last 24 points)</h5>
-                  <canvas id="co2Chart"></canvas>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
 
-        <!-- NEW: CO (Carbon Monoxide) -->
-        <section id="coSection" class="section d-none">
-          <div class="row g-3">
-            <div class="col-12 col-lg-4">
-              <div class="card card-panel">
-                <div class="card-body text-center">
-                  <h5 class="card-title">CO Gauge (ppm)</h5>
-                  <canvas id="coGauge"></canvas>
-                  <div class="mt-3">
-                    <span class="badge" id="coBadge">—</span>
+            <!-- NEW: Pie chart card -->
+            <div class="row g-3 mt-2">
+              <div class="col-12">
+                <div class="card card-panel">
+                  <div class="card-body">
+                    <h5 class="card-title mb-2">Pollutant Overview (Pie Chart)</h5>
+                    <p class="small text-muted mb-2">
+                      Shows the latest values of AQI, Temperature, Humidity, CO₂, CO, NO₂, and PM2.5.
+                    </p>
+                    <div style="height: 260px;">
+                      <canvas id="overviewPieChart"></canvas>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-            <div class="col-12 col-lg-8">
-              <div class="card card-panel">
-                <div class="card-body">
-                  <h5 class="card-title">CO (last 24 points)</h5>
-                  <canvas id="coChart"></canvas>
+          </section>
+
+          <!-- Temperature -->
+          <section id="tempSection" class="section d-none">
+            <div class="card card-panel">
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <h5 class="card-title mb-0">Temperature (°C)</h5>
+                  <span class="current-value-label" id="tempCurrent">—</span>
                 </div>
+                <canvas id="tempChart"></canvas>
               </div>
             </div>
-          </div>
-        </section>
+          </section>
 
-        <!-- NO2 -->
-        <section id="no2Section" class="section d-none">
-          <div class="row g-3">
-            <div class="col-12 col-lg-4">
-              <div class="card card-panel">
-                <div class="card-body text-center">
-                  <h5 class="card-title">NO₂ Gauge (ppm)</h5>
-                  <canvas id="no2Gauge"></canvas>
-                  <div class="mt-3">
-                    <span class="badge" id="no2Badge">—</span>
+          <!-- Humidity -->
+          <section id="humiditySection" class="section d-none">
+            <div class="card card-panel">
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <h5 class="card-title mb-0">Humidity (%)</h5>
+                  <span class="current-value-label" id="humidityCurrent">—</span>
+                </div>
+                <canvas id="humidityChart"></canvas>
+              </div>
+            </div>
+          </section>
+
+          <!-- CO2 -->
+          <section id="co2Section" class="section d-none">
+            <div class="row g-3">
+              <div class="col-12 col-lg-4">
+                <div class="card card-panel">
+                  <div class="card-body text-center">
+                    <h5 class="card-title">CO₂ Gauge (ppm)</h5>
+                    <canvas id="co2Gauge"></canvas>
+                    <div class="mt-3">
+                      <span class="badge" id="co2Badge">—</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-12 col-lg-8">
+                <div class="card card-panel">
+                  <div class="card-body">
+                    <h5 class="card-title">CO₂ (time series)</h5>
+                    <canvas id="co2Chart"></canvas>
                   </div>
                 </div>
               </div>
             </div>
-            <div class="col-12 col-lg-8">
-              <div class="card card-panel">
-                <div class="card-body">
-                  <h5 class="card-title">NO₂ (last 24 points)</h5>
-                  <canvas id="no2Chart"></canvas>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
+          </section>
 
-        <!-- PM2.5 -->
-        <section id="pmSection" class="section d-none">
-          <div class="card card-panel">
-            <div class="card-body">
-              <div class="d-flex justify-content-between align-items-center mb-2">
-                <h5 class="card-title mb-0">PM2.5 (µg/m³)</h5>
-                <span class="current-value-label" id="pmCurrent">—</span>
+          <!-- CO (Carbon Monoxide) -->
+          <section id="coSection" class="section d-none">
+            <div class="row g-3">
+              <div class="col-12 col-lg-4">
+                <div class="card card-panel">
+                  <div class="card-body text-center">
+                    <h5 class="card-title">CO Gauge (ppm)</h5>
+                    <canvas id="coGauge"></canvas>
+                    <div class="mt-3">
+                      <span class="badge" id="coBadge">—</span>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <canvas id="pmChart"></canvas>
+              <div class="col-12 col-lg-8">
+                <div class="card card-panel">
+                  <div class="card-body">
+                    <h5 class="card-title">CO (time series)</h5>
+                    <canvas id="coChart"></canvas>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
 
-        <!-- AQI Sub-Indices -->
-        <section id="aqiSubSection" class="section d-none">
-          <div class="row g-3">
-            <div class="col-12 col-lg-4">
-              <div class="card card-panel">
-                <div class="card-body">
-                  <h5 class="card-title">AQI (PM2.5)</h5>
-                  <canvas id="aqiPmChart"></canvas>
-                  <span class="badge mt-2 d-inline-block" id="aqiPmBadge">—</span>
+          <!-- NO2 -->
+          <section id="no2Section" class="section d-none">
+            <div class="row g-3">
+              <div class="col-12 col-lg-4">
+                <div class="card card-panel">
+                  <div class="card-body text-center">
+                    <h5 class="card-title">NO₂ Gauge (ppm)</h5>
+                    <canvas id="no2Gauge"></canvas>
+                    <div class="mt-3">
+                      <span class="badge" id="no2Badge">—</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-12 col-lg-8">
+                <div class="card card-panel">
+                  <div class="card-body">
+                    <h5 class="card-title">NO₂ (time series)</h5>
+                    <canvas id="no2Chart"></canvas>
+                  </div>
                 </div>
               </div>
             </div>
-            <div class="col-12 col-lg-4">
-              <div class="card card-panel">
-                <div class="card-body">
-                  <h5 class="card-title">AQI (CO)</h5>
-                  <canvas id="aqiCoChart"></canvas>
-                  <span class="badge mt-2 d-inline-block" id="aqiCoBadge">—</span>
-                </div>
-              </div>
-            </div>
-            <div class="col-12 col-lg-4">
-              <div class="card card-panel">
-                <div class="card-body">
-                  <h5 class="card-title">AQI (NO₂)</h5>
-                  <canvas id="aqiNo2Chart"></canvas>
-                  <span class="badge mt-2 d-inline-block" id="aqiNo2Badge">—</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
+          </section>
 
-      </main>
+          <!-- PM2.5 -->
+          <section id="pmSection" class="section d-none">
+            <div class="card card-panel">
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <h5 class="card-title mb-0">PM2.5 (µg/m³)</h5>
+                  <span class="current-value-label" id="pmCurrent">—</span>
+                </div>
+                <canvas id="pmChart"></canvas>
+              </div>
+            </div>
+          </section>
+
+          <!-- AQI Sub-Indices -->
+          <section id="aqiSubSection" class="section d-none">
+            <div class="row g-3">
+              <div class="col-12 col-lg-4">
+                <div class="card card-panel">
+                  <div class="card-body">
+                    <h5 class="card-title">AQI (PM2.5)</h5>
+                    <canvas id="aqiPmChart"></canvas>
+                    <span class="badge mt-2 d-inline-block" id="aqiPmBadge">—</span>
+                  </div>
+                </div>
+              </div>
+              <div class="col-12 col-lg-4">
+                <div class="card card-panel">
+                  <div class="card-body">
+                    <h5 class="card-title">AQI (CO)</h5>
+                    <canvas id="aqiCoChart"></canvas>
+                    <span class="badge mt-2 d-inline-block" id="aqiCoBadge">—</span>
+                  </div>
+                </div>
+              </div>
+              <div class="col-12 col-lg-4">
+                <div class="card card-panel">
+                  <div class="card-body">
+                    <h5 class="card-title">AQI (NO₂)</h5>
+                    <canvas id="aqiNo2Chart"></canvas>
+                    <span class="badge mt-2 d-inline-block" id="aqiNo2Badge">—</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- NEW: Health Predictions section -->
+          <section id="predictionSection" class="section d-none">
+            <div class="card card-panel">
+              <div class="card-body">
+                <h5 class="card-title">Health Risk Predictions</h5>
+                <p class="small text-muted">
+                  ML model predictions based on latest sensor data (from <code>DiseasePredictions</code> collection).
+                </p>
+                <div id="predictionEmpty" class="small text-muted">
+                  No predictions available yet.
+                </div>
+                <div id="predictionList" class="d-flex flex-column gap-3 mt-2"></div>
+              </div>
+            </div>
+          </section>
+
+        </main>
+      </div>
     </div>
   </div>
 
   <!-- Bootstrap JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
-  <!-- Dashboard logic -->
+  <!-- Dashboard + auth logic -->
   <script type="module" src="app.js"></script>
 </body>
 </html>

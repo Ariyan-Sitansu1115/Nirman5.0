@@ -1,245 +1,170 @@
-/* Theme variables */
 :root {
-  --bg: #f4f6f9;
-  --panel: #ffffff;
-  --text: #1e293b;
+  --bg: #f8fafc;
+  --bg-alt: #ffffff;
+  --text: #0f172a;
   --muted: #64748b;
-  --header: #ffffff;
-  --border: #e5e7eb;
+  --border: #e2e8f0;
+  --accent: #0ea5e9;
 
-  /* Dark theme */
-  --bg-dark: #0f172a;
-  --panel-dark: #111827;
+  --bg-dark: #020617;
+  --bg-alt-dark: #020617;
   --text-dark: #e5e7eb;
-  --muted-dark: #94a3b8;
-  --header-dark: #0b1220;
-  --border-dark: #1f2937;
-
-  /* Status colors */
-  --good: #22c55e;
-  --moderate: #eab308;
-  --unhealthy: #ef4444;
+  --muted-dark: #9ca3af;
+  --border-dark: #1f2933;
 }
 
-/* Header background per theme */
-html[data-theme="light"] .bg-header { background: var(--header); }
-html[data-theme="dark"]  .bg-header { background: var(--header-dark); }
-
-/* Body + text per theme */
-html[data-theme="light"] body {
-  background: var(--bg);
+body {
+  font-family: "Roboto", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  background-color: var(--bg);
   color: var(--text);
 }
 
-html[data-theme="dark"] body {
-  background: var(--bg-dark);
+.theme-dark {
+  background-color: var(--bg-dark);
   color: var(--text-dark);
 }
 
-/* Sidebar panel */
-html[data-theme="light"] .sidebar {
-  background: var(--panel);
+.bg-header {
+  background-color: rgba(248, 250, 252, 0.95);
+  backdrop-filter: blur(12px);
 }
-html[data-theme="dark"] .sidebar {
-  background: var(--panel-dark);
+
+.theme-dark .bg-header {
+  background-color: rgba(15, 23, 42, 0.9);
+}
+
+/* Sidebar */
+.sidebar {
+  min-height: calc(100vh - 56px);
+  background: linear-gradient(180deg, #f8fafc, #e5e7eb);
+}
+
+.theme-dark .sidebar {
+  background: linear-gradient(180deg, #020617, #0f172a);
+}
+
+.sidebar .nav-link {
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.sidebar .nav-link.active {
+  background-color: #0ea5e9;
+  color: white;
 }
 
 /* Cards */
-html[data-theme="light"] .card-panel {
-  background: var(--panel);
+.card-panel {
+  border-radius: 18px;
   border: 1px solid var(--border);
-  border-radius: 12px;
-}
-html[data-theme="dark"] .card-panel {
-  background: var(--panel-dark);
-  border: 1px solid var(--border-dark);
-  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.05);
+  background-color: var(--bg-alt);
 }
 
-/* Typography */
-body,
-.navbar-brand,
-.card-title {
-  font-family: 'Roboto', system-ui, -apple-system, Segoe UI, Helvetica, Arial, sans-serif;
-}
-
-.navbar-brand {
-  font-weight: 700;
-  letter-spacing: 0.2px;
+.theme-dark .card-panel {
+  border-color: var(--border-dark);
+  background-color: #020617;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6);
 }
 
 .card-title {
   font-weight: 600;
 }
 
-/* Badge base */
+/* Badges */
 .badge {
-  display: inline-block;
-  padding: 0.45rem 0.7rem;
-  border-radius: 8px;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
   font-weight: 500;
-  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  font-size: 0.75rem;
 }
 
-/* Badge text color per theme */
-.theme-light .badge { color: var(--text); }
-.theme-dark  .badge { color: var(--text-dark); }
-
-/* Status badge variants */
 .badge.good {
-  background: rgba(34, 197, 94, 0.15);
-  border: 1px solid var(--good);
+  background-color: #dcfce7;
+  color: #15803d;
 }
 
 .badge.moderate {
-  background: rgba(234, 179, 8, 0.15);
-  border: 1px solid var(--moderate);
+  background-color: #fef9c3;
+  color: #854d0e;
 }
 
 .badge.unhealthy {
-  background: rgba(239, 68, 68, 0.15);
-  border: 1px solid var(--unhealthy);
+  background-color: #fee2e2;
+  color: #b91c1c;
 }
 
-/* Section toggling */
-.section.d-none { display: none !important; }
-
-/* Sidebar navigation styles */
-#sensorNav .nav-link {
-  border-radius: 8px;
-  color: inherit;
-}
-
-#sensorNav .nav-link.active {
-  background: #0ea5e9;
-  color: #ffffff;
-}
-
-/* Layout tweaks */
-.container-fluid { padding-top: 12px; }
-.sidebar { min-height: calc(100vh - 56px); } /* header height approx */
-.card-panel .card-body { padding: 1rem 1.25rem; }
-
-/* Header controls */
-.navbar .btn.btn-outline-secondary {
-  border-radius: 8px;
-  padding: 0.25rem 0.6rem;
-}
-
-/* Canvas sizing for charts */
-section .card-panel canvas {
-  width: 100% !important;
-}
-
-/* Circular gauge canvases (AQI, CO2, NO2, CO) */
-#aqiGauge,
-#co2Gauge,
-#no2Gauge,
-#coGauge {
-  max-width: 220px;
-  height: 220px !important;   /* square for true circle */
-  margin: 0 auto;
-  display: block;
-}
-
-/* Line chart heights */
-#aqiChart,
-#tempChart,
-#humidityChart,
-#co2Chart,
-#coChart,
-#no2Chart,
-#pmChart,
-#aqiPmChart,
-#aqiCoChart,
-#aqiNo2Chart {
-  height: 260px !important;
-}
-
-/* Small screens adjustments */
-@media (max-width: 991.98px) {
-  .sidebar {
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-  }
-  html[data-theme="dark"] .sidebar {
-    border-bottom: 1px solid var(--border-dark);
-  }
-  #aqiChart,
-  #tempChart,
-  #humidityChart,
-  #co2Chart,
-  #coChart,
-  #no2Chart,
-  #pmChart,
-  #aqiPmChart,
-  #aqiCoChart,
-  #aqiNo2Chart {
-    height: 220px !important;
-  }
-}
-
-/* Dominant pollutant indicator */
-#dominantPollutant {
-  display: inline-block;
-  margin-top: 6px;
-  color: var(--muted);
-}
-
-html[data-theme="dark"] #dominantPollutant {
-  color: var(--muted-dark);
-}
-
-/* Subtle hover on cards */
-.card-panel:hover {
-  box-shadow: 0 2px 10px rgba(0,0,0,0.06);
-}
-
-/* Borders for separation in light/dark */
-.border-end {
-  border-color: var(--border) !important;
-}
-html[data-theme="dark"] .border-end {
-  border-color: var(--border-dark) !important;
-}
-
-/* Sticky header shadow */
-.navbar.sticky-top {
-  box-shadow: 0 1px 8px rgba(0,0,0,0.06);
-}
-html[data-theme="dark"] .navbar.sticky-top {
-  box-shadow: 0 1px 8px rgba(0,0,0,0.35);
-}
-
-/* Dark theme text fixes */
-html[data-theme="dark"] .navbar,
-html[data-theme="dark"] .navbar-brand,
-html[data-theme="dark"] .card-title,
-html[data-theme="dark"] .card-panel,
-html[data-theme="dark"] .card-panel .card-body,
-html[data-theme="dark"] .sidebar,
-html[data-theme="dark"] .nav-link {
-  color: var(--text-dark) !important;
-}
-
-html[data-theme="dark"] .text-muted,
-html[data-theme="dark"] #lastUpdate,
-html[data-theme="dark"] #dominantPollutant {
-  color: var(--muted-dark) !important;
-}
-
-/* Keep all canvases transparent */
-canvas {
-  background-color: transparent !important;
-  display: block;
-}
-/* Current-value labels (top-right in cards) */
+/* Current-value labels */
 .current-value-label {
   font-size: 0.9rem;
   font-weight: 500;
   color: var(--muted);
 }
 
-html[data-theme="dark"] .current-value-label {
+.theme-dark .current-value-label {
   color: var(--muted-dark);
+}
+
+/* Sections */
+.section {
+  min-height: calc(100vh - 80px);
+}
+
+/* Charts */
+canvas {
+  width: 100% !important;
+}
+
+/* ---------- NEW: login screen ---------- */
+.login-wrapper {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at top left, #0ea5e91f, transparent 55%),
+              radial-gradient(circle at bottom right, #22c55e1f, transparent 55%);
+}
+
+html[data-theme="dark"] .login-wrapper {
+  background: radial-gradient(circle at top left, #0ea5e933, transparent 55%),
+              radial-gradient(circle at bottom right, #22c55e33, transparent 55%);
+}
+
+.login-card {
+  max-width: 420px;
+  width: 100%;
+}
+
+/* ---------- NEW: prediction cards ---------- */
+.prediction-card {
+  border-radius: 10px;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--border);
+  background: rgba(148, 163, 184, 0.04);
+}
+
+html[data-theme="dark"] .prediction-card {
+  border-color: var(--border-dark);
+  background: rgba(15, 23, 42, 0.8);
+}
+
+.prediction-title {
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.prediction-prob {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+html[data-theme="dark"] .prediction-prob {
+  color: var(--muted-dark);
+}
+
+.prediction-advice {
+  margin-bottom: 0;
+  padding-left: 1.1rem;
 }
